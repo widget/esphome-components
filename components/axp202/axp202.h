@@ -11,7 +11,9 @@ namespace axp202 {
 class AXP202Component : public PollingComponent, public i2c::I2CDevice {
  public:
   void set_battery_level_sensor(sensor::Sensor *battery_level_sensor) { battery_level_sensor_ = battery_level_sensor; }
-  void set_battery_voltage_sensor(sensor::Sensor *battery_voltage_sensor) { battery_voltage_sensor_ = battery_voltage_sensor; }
+  void set_battery_voltage_sensor(sensor::Sensor *battery_voltage_sensor) {
+    battery_voltage_sensor_ = battery_voltage_sensor;
+  }
   void set_bus_voltage_sensor(sensor::Sensor *bus_voltage_sensor) { bus_voltage_sensor_ = bus_voltage_sensor; }
   void set_brightness(float brightness) { brightness_ = brightness; }
 
@@ -24,7 +26,7 @@ class AXP202Component : public PollingComponent, public i2c::I2CDevice {
 
   void SetLDO2(bool State);
   void SetLDO3(bool State);
-  
+
  protected:
   sensor::Sensor *battery_level_sensor_{nullptr};
   sensor::Sensor *battery_voltage_sensor_{nullptr};

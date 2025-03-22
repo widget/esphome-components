@@ -9,85 +9,125 @@ static const char *TAG = "axp202.sensor";
 
 void AXP202Component::setup() {
   ESP_LOGD(TAG, "Starting up");
-  begin(false, false, false, false, false);
+  begin(false, false);
 }
 
 void AXP202Component::dump_config() {
   ESP_LOGCONFIG(TAG, "AXP202:");
   LOG_I2C_DEVICE(this);
-  // LOG_SENSOR("  ", "Battery Level", this->batterylevel_sensor_);
+  if (this->battery_voltage_sensor_){
+  LOG_SENSOR("  ", "Voltage", this->battery_voltage_sensor_);}
+  if (this->battery_level_sensor_){
+  LOG_SENSOR("  ", "Battery Level", this->battery_level_sensor_);}
 }
 
 float AXP202Component::get_setup_priority() const { return setup_priority::DATA; }
 
 void AXP202Component::update() {
-  /*
-      if (this->batterylevel_sensor_ != nullptr) {
-        // To be fixed
-        // This is not giving the right value - mostly there to have some sample sensor...
-        float vbat = GetBatVoltage();
-        float batterylevel = 100.0 * ((vbat - 3.0) / (4.1 - 3.0));
 
-        ESP_LOGD(TAG, "Got Battery Level=%f (%f)", batterylevel, vbat);
-        if (batterylevel > 100.) {
-          batterylevel = 100;
-        }
-        this->batterylevel_sensor_->publish_state(batterylevel);
-      }*/
+  bool batt_present = GetBatState();
+  bool bus_present = GetVBusState();
+  
+  if (this->bus_voltage_sensor_ != nullptr) {
 
-  UpdateBrightness();
-}
-
-void AXP202Component::begin(bool disableLDO2, bool disableLDO3, bool disableRTC, bool disableDCDC1, bool disableDCDC3) {
-  ESP_LOGD(TAG, "Setting LDO2 voltage to 3V3");
-  // Set LDO2 & LDO3(TFT_LED & TFT) 3.0V
-  Write1Byte(0x28, 0xcc);
-
-  /* Set ADC sample rate to 200hz
-  Write1Byte(0x84, 0b11110010);
-
-  // Set ADC to All Enable
-  Write1Byte(0x82, 0xff);
-
-  // Bat charge voltage to 4.2, Current 100MA
-  Write1Byte(0x33, 0xc0);*/
-
-  // Depending on configuration enable LDO2, LDO3, DCDC1, DCDC3.
-  ESP_LOGD(TAG, "Enabling LDOs");
-  uint8_t buf = (Read8bit(0x12) & 0xef) | 0x4D;
-  if (disableLDO3)
-    buf &= ~(1 << 3);
-  if (disableLDO2)
-    buf &= ~(1 << 2);
-  if (disableDCDC3)
-    buf &= ~(1 << 1);
-  if (disableDCDC1)
-    buf &= ~(1 << 0);
-  Write1Byte(0x12, buf);
-
-  // 128ms power on, 4s power off
-  // Write1Byte(0x36, 0x0C);
-
-  if (0)  //! disableRTC)
-  {
-    // Set RTC voltage to 3.3V
-    Write1Byte(0x91, 0xF0);
-
-    // Set GPIO0 to LDO
-    Write1Byte(0x90, 0x02);
+    if (bus_present) {
+      float vbus = GetVBusVoltage();
+      ESP_LOGD(TAG, "Got Bus Voltage=%.2fV", vbus);
+      
+      this->bus_voltage_sensor_->publish_state(vbus);
+    } else {
+      
+      ESP_LOGD(TAG, "Bus Voltage not present");
+      this->bus_voltage_sensor_->publish_state(NAN);
+    }
   }
 
-  /* Disable vbus hold limit
-  Write1Byte(0x30, 0x80);
+  if (this->battery_voltage_sensor_ != nullptr) {
 
-  // Set temperature protection
+    if (batt_present) {
+      float vbat = GetBatVoltage();
+      ESP_LOGD(TAG, "Got Battery Voltage=%.2fV", vbat);
+      this->battery_voltage_sensor_->publish_state(vbat);
+    } else {
+      ESP_LOGD(TAG, "Battery Voltage not present");
+      this->battery_voltage_sensor_->publish_state(NAN);
+    }
+  }
+
+  if (this->battery_level_sensor_ != nullptr) {
+
+    if (batt_present) {
+      uint8_t batterylevel = GetFuelGauge();
+      ESP_LOGD(TAG, "Got Battery Level=%d", batterylevel);
+      this->battery_level_sensor_->publish_state(float(batterylevel));
+    } else {
+      ESP_LOGD(TAG, "Battery not present");
+      this->battery_level_sensor_->publish_state(NAN);
+    }
+  }
+
+  //UpdateBrightness();
+}
+
+
+
+void AXP202Component::begin(bool disableLDO2, bool disableLDO3) {
+  ESP_LOGD(TAG, "Setting LDO2/3 voltages");
+  // Set LDO2 & LDO3(TFT_LED & TFT) 3.0V
+  Write1Byte(0x28, 0xcc);
+  Write1Byte(0x29, 0x80); // Follow LDO3IN
+
+  /* Set ADC sample rate to 25Hz
+   * Default is 25Hz, 80uA output, battery temp monitoring, flip TS pin to input when sampling.
+   */
+  Write1Byte(0x84, 0b00110010);
+
+  // Set ADC to All Enable. Battery voltage, VBUS, APS voltage, TS pin ADC.
+  // Could enable current measurement
+  Write1Byte(0x82, 0b10001011);
+
+  // Enable bat detection, CHGLED disabled (there isn't one)
+  Write1Byte(0x32, 0x46);
+
+  // Bat charge voltage to 4.2, Current 300mA (1C of 380mAh bat)
+  Write1Byte(0x33, 0xc0);
+
+  // Configure button presses, 128mS startup time, 1S for a long press, PWROK after 64mS, shutdown on 4s press
+  Write1Byte(0x36, 0x02);
+
+  // Set temperature protection to 3.22V (useful?)
   Write1Byte(0x39, 0xfc);
 
-  // Enable RTC BAT charge
-  Write1Byte(0x35, 0xa2 & (disableRTC ? 0x7F : 0xFF));
+  // TODO rephrase this code I think
+  // Depending on configuration enable LDO2, LDO3
+  ESP_LOGD(TAG, "Enabling power lines");
+  uint8_t buf = (Read8bit(0x12) & 0xef) | 0x4D;
+  if (disableLDO3)
+    buf &= ~(1 << 6);
+  // Unused bit
+  // Not using DCDC2
+  buf &= ~(1 << 4);
+  // Not using LDO4
+  buf &= ~(1 << 3);
+  if (disableLDO2)
+    buf &= ~(1 << 2);
+  //if (disableDCDC3) // ESP32!
+  // Not using EXTEN
+  buf &= ~(1 << 0);
+  ESP_LOGD(TAG, "Enabling power lines: 0x%x", buf);
+  Write1Byte(0x12, buf);
 
-  // Enable bat detection (default)
-  Write1Byte(0x32, 0x46);*/
+
+  // Validate VBUS voltage to 4.45V.  Session detection off, charge/discharge resistance left off
+  Write1Byte(0x8b, 0x20);
+  // GPIO0 is connected to AGND, others are N/C
+
+  // TODO How do we service an interrupt to read the pins?
+
+  // Coulomb counter is disabled
+
+  // There is a backup battery for the RTC on LDO1 which is not s/w controllable
+
 }
 
 void AXP202Component::Write1Byte(uint8_t Addr, uint8_t Data) { this->write_byte(Addr, Data); }
@@ -168,12 +208,90 @@ void AXP202Component::UpdateBrightness() {
   Write1Byte(0x28, ((buf & 0x0f) | (ubri << 4)));
 }
 
-bool AXP202Component::GetBatState() {  // YES
+bool AXP202Component::GetBatState() { 
   if (Read8bit(0x01) | 0x20)
     return true;
   else
     return false;
 }
+
+uint8_t AXP202Component::GetFuelGauge()
+{
+    return Read8bit(0xb9) & 0x7f;
+}
+
+
+float AXP202Component::GetBatVoltage()
+{
+    float ADCLSB = 1.1 / 1000.0;
+    uint16_t ReData = Read12Bit( 0x78 );
+    return ReData * ADCLSB;
+}
+
+float AXP202Component::GetBatChargeCurrent()
+{
+    float ADCLSB = 0.5;
+    uint16_t ReData = Read13Bit( 0x7A );
+    return ReData * ADCLSB;
+}
+
+bool AXP202Component::GetVBusState() { 
+  if (Read8bit(0x0) | 0x20)
+    return true;
+  else
+    return false;
+}
+
+float AXP202Component::GetVBusVoltage()
+{
+    float ADCLSB = 1.7 / 1000.0;
+    uint16_t ReData = Read12Bit( 0x5A );
+    return ReData * ADCLSB;
+}
+
+float AXP202Component::GetTempInternal()
+{
+    float ADCLSB = 0.1;
+    const float OFFSET_DEG_C = -144.7;
+    uint16_t ReData = Read12Bit( 0x5E );
+    return OFFSET_DEG_C + ReData * ADCLSB;
+}
+
+void AXP202Component::SetLDO2(bool State) {
+  uint8_t buf = Read8bit(0x12);
+  if (State == true) {
+    ESP_LOGD(TAG, "Enabling LDO2");
+    buf = (1 << 2) | buf;
+  } else {
+    ESP_LOGD(TAG, "Disabling LDO2");
+    buf = ~(1 << 2) & buf;
+  }
+  Write1Byte(0x12, buf);
+}
+
+void AXP202Component::SetLDO3(bool State) {
+  uint8_t buf = Read8bit(0x12);
+  if (State == true) {
+    ESP_LOGD(TAG, "Enabling LDO3");
+    buf = (1 << 6) | buf;
+  } else {
+    ESP_LOGD(TAG, "Disabling LDO3");
+    buf = ~(1 << 6) & buf;
+  }
+  Write1Byte(0x12, buf);
+}
+
+void AXP202Component::SetLDO4(bool State) {
+  uint8_t buf = Read8bit(0x12);
+  if (State == true) {
+    buf = (1 << 3) | buf;
+  } else {
+    buf = ~(1 << 3) & buf;
+  }
+  Write1Byte(0x12, buf);
+}
+
+
 /*
 uint8_t AXP202Component::GetBatData()
 {
@@ -381,12 +499,6 @@ uint8_t AXP202Component::GetWarningLevel(void)
     return Read8bit(0x47) & 0x01;
 }
 
-float AXP202Component::GetBatVoltage()
-{
-    float ADCLSB = 1.1 / 1000.0;
-    uint16_t ReData = Read12Bit( 0x78 );
-    return ReData * ADCLSB;
-}
 
 float AXP202Component::GetBatCurrent()
 {
@@ -396,26 +508,20 @@ float AXP202Component::GetBatCurrent()
     return ( CurrentIn - CurrentOut ) * ADCLSB;
 }
 
-float AXP202Component::GetVinVoltage()
+float AXP202Component::GetVinVoltage() // ACIN
 {
     float ADCLSB = 1.7 / 1000.0;
     uint16_t ReData = Read12Bit( 0x56 );
     return ReData * ADCLSB;
 }
 
-float AXP202Component::GetVinCurrent()
+float AXP202Component::GetVinCurrent() // ACIN
 {
     float ADCLSB = 0.625;
     uint16_t ReData = Read12Bit( 0x58 );
     return ReData * ADCLSB;
 }
 
-float AXP202Component::GetVBusVoltage()
-{
-    float ADCLSB = 1.7 / 1000.0;
-    uint16_t ReData = Read12Bit( 0x5A );
-    return ReData * ADCLSB;
-}
 
 float AXP202Component::GetVBusCurrent()
 {
@@ -424,13 +530,6 @@ float AXP202Component::GetVBusCurrent()
     return ReData * ADCLSB;
 }
 
-float AXP202Component::GetTempInAXP202()
-{
-    float ADCLSB = 0.1;
-    const float OFFSET_DEG_C = -144.7;
-    uint16_t ReData = Read12Bit( 0x5E );
-    return OFFSET_DEG_C + ReData * ADCLSB;
-}
 
 float AXP202Component::GetBatPower()
 {
@@ -440,12 +539,6 @@ float AXP202Component::GetBatPower()
     return  VoltageLSB * CurrentLCS * ReData/ 1000.0;
 }
 
-float AXP202Component::GetBatChargeCurrent()
-{
-    float ADCLSB = 0.5;
-    uint16_t ReData = Read13Bit( 0x7A );
-    return ReData * ADCLSB;
-}
 
 float AXP202Component::GetAPSVoltage()
 {
@@ -469,39 +562,8 @@ float AXP202Component::GetBatCoulombOut()
 void AXP202Component::SetCoulombClear()
 {
     Write1Byte(0xB8,0x20);
-}*/
-
-void AXP202Component::SetLDO2(bool State) {
-  uint8_t buf = Read8bit(0x12);
-  if (State == true) {
-    buf = (1 << 2) | buf;
-  } else {
-    buf = ~(1 << 2) & buf;
-  }
-  Write1Byte(0x12, buf);
 }
 
-void AXP202Component::SetLDO3(bool State) {
-  uint8_t buf = Read8bit(0x12);
-  if (State == true) {
-    buf = (1 << 6) | buf;
-  } else {
-    buf = ~(1 << 6) & buf;
-  }
-  Write1Byte(0x12, buf);
-}
-
-void AXP202Component::SetLDO4(bool State) {
-  uint8_t buf = Read8bit(0x12);
-  if (State == true) {
-    buf = (1 << 3) | buf;
-  } else {
-    buf = ~(1 << 3) & buf;
-  }
-  Write1Byte(0x12, buf);
-}
-
-/*
 void AXP202Component::SetChargeCurrent(uint8_t current)
 {
     uint8_t buf = Read8bit(0x33);

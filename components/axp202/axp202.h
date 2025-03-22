@@ -10,7 +10,9 @@ namespace axp202 {
 
 class AXP202Component : public PollingComponent, public i2c::I2CDevice {
  public:
-  // void set_batterylevel_sensor(sensor::Sensor *batterylevel_sensor) { batterylevel_sensor_ = batterylevel_sensor; }
+  void set_battery_level_sensor(sensor::Sensor *battery_level_sensor) { battery_level_sensor_ = battery_level_sensor; }
+  void set_battery_voltage_sensor(sensor::Sensor *battery_voltage_sensor) { battery_voltage_sensor_ = battery_voltage_sensor; }
+  void set_bus_voltage_sensor(sensor::Sensor *bus_voltage_sensor) { bus_voltage_sensor_ = bus_voltage_sensor; }
   void set_brightness(float brightness) { brightness_ = brightness; }
 
   // ========== INTERNAL METHODS ==========
@@ -20,8 +22,13 @@ class AXP202Component : public PollingComponent, public i2c::I2CDevice {
   float get_setup_priority() const override;
   void update() override;
 
+  void SetLDO2(bool State);
+  void SetLDO3(bool State);
+  
  protected:
-  // sensor::Sensor *batterylevel_sensor_;
+  sensor::Sensor *battery_level_sensor_{nullptr};
+  sensor::Sensor *battery_voltage_sensor_{nullptr};
+  sensor::Sensor *bus_voltage_sensor_{nullptr};
   float brightness_{1.0f};
   float curr_brightness_{-1.0f};
 
@@ -31,10 +38,10 @@ class AXP202Component : public PollingComponent, public i2c::I2CDevice {
    * LDO4: NO USE
    * DCDC3: "ESP32 (can't close)""
    */
-  void begin(bool disableLDO2 = false, bool disableLDO3 = false, bool disableRTC = false, bool disableDCDC1 = false,
-             bool disableDCDC3 = false);
+  void begin(bool disableLDO2 = false, bool disableLDO3 = false);
   void UpdateBrightness();
   bool GetBatState();
+  bool GetVBusState();
   /*
   uint8_t  GetBatData();
 
@@ -65,15 +72,7 @@ class AXP202Component : public PollingComponent, public i2c::I2CDevice {
 
   // void SetChargeVoltage( uint8_t );
   void  SetChargeCurrent( uint8_t );
-  float GetBatVoltage();
-  float GetBatCurrent();
-  float GetVinVoltage();
-  float GetVinCurrent();
-  float GetVBusVoltage();
-  float GetVBusCurrent();
-  float GetTempInAXP192();
   float GetBatPower();
-  float GetBatChargeCurrent();
   float GetAPSVoltage();
   float GetBatCoulombInput();
   float GetBatCoulombOut();
@@ -83,8 +82,17 @@ class AXP202Component : public PollingComponent, public i2c::I2CDevice {
 
   void PowerOff();
   */
-  void SetLDO2(bool State);
-  void SetLDO3(bool State);
+
+  float GetBatVoltage();
+  float GetBatChargeCurrent();
+  uint8_t GetFuelGauge();
+  float GetBatCurrent();
+  float GetVinVoltage();
+  float GetVinCurrent();
+  float GetVBusVoltage();
+  float GetVBusCurrent();
+  float GetTempInternal();
+
   void SetLDO4(bool State);
 
   void Write1Byte(uint8_t Addr, uint8_t Data);

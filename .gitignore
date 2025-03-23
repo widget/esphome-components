@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+# Python compilation
+*.pyc
+
+# Font generation by ESPhome
+*.ttf

@@ -14,7 +14,8 @@ from esphome.const import (
 LOGGER = logging.getLogger(__name__)
 
 MULTI_CONF = True
-CODEOWNERS = ["@widget"]
+AUTO_LOAD = ["sensor", "binary_sensor"]
+
 DEPENDENCIES = ["i2c"]
 
 axp202_ns = cg.esphome_ns.namespace("axp202")

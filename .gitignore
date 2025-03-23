@@ -33,6 +33,7 @@
 
 # Python compilation
 *.pyc
+__pycache__
 
 # Font generation by ESPhome
 *.ttf

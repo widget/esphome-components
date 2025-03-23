@@ -11,9 +11,9 @@ namespace axp202 {
 
 struct AXP202Store {
   ISRInternalGPIOPin irq;
-  volatile bool trigger{false};
+  volatile bool trigger{true};
 
-  static void gpio_intr(AXP202Store *arg);
+  static void gpio_intr(AXP202Store *store);
 };
 
 class AXP202Component : public PollingComponent, public i2c::I2CDevice {
@@ -51,7 +51,7 @@ class AXP202Component : public PollingComponent, public i2c::I2CDevice {
   float curr_brightness_{-1.0f};
 
   InternalGPIOPin *interrupt_pin_{nullptr};
-  AXP202Store store_{};
+  AXP202Store store_;
 
   /**
    * LDO2: Display backlight

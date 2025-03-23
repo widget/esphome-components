@@ -12,11 +12,13 @@ void AXP202Component::setup() {
   begin(false, false);
 
   if (this->interrupt_pin_ != nullptr) {
-    ESP_LOGD(TAG, "Setting interrupt");
+    ESP_LOGV(TAG, "Setting interrupt");
     this->interrupt_pin_->pin_mode(gpio::FLAG_INPUT | gpio::FLAG_PULLUP);
     this->interrupt_pin_->setup();
     this->store_.irq = this->interrupt_pin_->to_isr();
     this->interrupt_pin_->attach_interrupt(AXP202Store::gpio_intr, &this->store_, gpio::INTERRUPT_RISING_EDGE);
+  } else {
+    ESP_LOGW(TAG, "No interrupt pin configured!");
   }
 }
 
@@ -60,31 +62,30 @@ void AXP202Component::loop() {
     ESP_LOGV(TAG, "IRQ3: 0x%02x", irq);
 
     clearInterrupts();
-
     this->store_.trigger = false;
   }
 }
 
-void IRAM_ATTR HOT AXP202Store::gpio_intr(AXP202Store *arg) { arg->trigger = true; }
+void AXP202Store::gpio_intr(AXP202Store *store) { store->trigger = true; }
 
 void AXP202Component::dump_config() {
   ESP_LOGCONFIG(TAG, "AXP202:");
   LOG_I2C_DEVICE(this);
-  LOG_PIN("Interrupt Pin: ", this->interrupt_pin_);
+  LOG_PIN("  Interrupt Pin: ", this->interrupt_pin_);
   if (this->bus_voltage_sensor_) {
-    LOG_SENSOR("  ", "Bus Voltage", this->bus_voltage_sensor_);
+    LOG_SENSOR("  ", "Bus Voltage:", this->bus_voltage_sensor_);
   }
   if (this->battery_voltage_sensor_) {
-    LOG_SENSOR("  ", "Battery Voltage", this->battery_voltage_sensor_);
+    LOG_SENSOR("  ", "Battery Voltage:", this->battery_voltage_sensor_);
   }
   if (this->battery_level_sensor_) {
-    LOG_SENSOR("  ", "Battery Level", this->battery_level_sensor_);
+    LOG_SENSOR("  ", "Battery Level:", this->battery_level_sensor_);
   }
   if (this->charging_) {
-    LOG_BINARY_SENSOR("  ", "Battery Charging", this->charging_);
+    LOG_BINARY_SENSOR("  ", "Battery Charging:", this->charging_);
   }
   if (this->usb_) {
-    LOG_BINARY_SENSOR("  ", "Vusb usable", this->usb_);
+    LOG_BINARY_SENSOR("  ", "Vusb usable:", this->usb_);
   }
   LOG_UPDATE_INTERVAL(this);
 }

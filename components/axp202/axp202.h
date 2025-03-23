@@ -95,7 +95,6 @@ class AXP202Component : public PollingComponent, public i2c::I2CDevice {
   void LightSleep(uint64_t time_in_us = 0);
 
   // void SetChargeVoltage( uint8_t );
-  void  SetChargeCurrent( uint8_t );
   float GetBatPower();
   float GetAPSVoltage();
   float GetBatCoulombInput();
@@ -106,6 +105,7 @@ class AXP202Component : public PollingComponent, public i2c::I2CDevice {
 
   void PowerOff();
   */
+  void SetChargeCurrent(uint8_t);
 
   float GetBatVoltage();
   float GetBatChargeCurrent();

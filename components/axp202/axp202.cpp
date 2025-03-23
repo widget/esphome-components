@@ -37,7 +37,7 @@ void AXP202Component::publishUsb() {
 }
 
 void AXP202Component::checkInterrupts() {
-  ESP_LOGI(TAG, "Servicing interrupt");
+  ESP_LOGD(TAG, "Checking IRQs");
 
   uint8_t irq = Read8bit(0x48);  // IRQ1
   ESP_LOGD(TAG, "IRQ1: 0x%02x", irq);
@@ -65,6 +65,7 @@ void AXP202Component::checkInterrupts() {
 
 void AXP202Component::loop() {
   if (this->store_.trigger) {
+    ESP_LOGI(TAG, "Servicing interrupt");
     checkInterrupts();
     this->store_.trigger = false;
   }
@@ -143,9 +144,10 @@ void AXP202Component::update() {
 }
 
 void AXP202Component::clearInterrupts() {
-  uint8_t ones[5] = {0xff};
-
-  write_bytes(0x49, ones, 5);
+  ESP_LOGD(TAG, "Clearing interrupts");
+  for (uint8_t irq_addr = 0x48; irq_addr < 0x4d; irq_addr++) {
+    Write1Byte(irq_addr, 0xff);
+  }
 }
 
 void AXP202Component::begin(bool disableLDO2, bool disableLDO3) {
@@ -204,7 +206,7 @@ void AXP202Component::begin(bool disableLDO2, bool disableLDO3) {
   // TODO How do we service an interrupt to read the pins?
   Write1Byte(0x40, 0b1100);  // IRQ1 VBus presence and loss
   Write1Byte(0x41, 0b1100);  // IRQ2 Charging presence and loss
-  Write1Byte(0x42, 0b11);    // IRQ3 just the PEK short and long press
+  Write1Byte(0x42, 0b0011);  // IRQ3 just the PEK short and long press
   Write1Byte(0x43, 0x0);     // IRQ4
   // IRQ5 default off
 
@@ -368,6 +370,12 @@ void AXP202Component::SetLDO4(bool State) {
     buf = ~(1 << 3) & buf;
   }
   Write1Byte(0x12, buf);
+}
+
+void AXP202Component::SetChargeCurrent(uint8_t current) {
+  uint8_t buf = Read8bit(0x33);
+  buf = (buf & 0xf0) | (current & 0x07);
+  Write1Byte(0x33, buf);
 }
 
 /*
@@ -640,13 +648,6 @@ float AXP202Component::GetBatCoulombOut()
 void AXP202Component::SetCoulombClear()
 {
     Write1Byte(0xB8,0x20);
-}
-
-void AXP202Component::SetChargeCurrent(uint8_t current)
-{
-    uint8_t buf = Read8bit(0x33);
-    buf = (buf & 0xf0) | (current & 0x07);
-    Write1Byte(0x33, buf);
 }
 
 void AXP202Component::PowerOff()

@@ -14,7 +14,6 @@ from esphome.const import (
 LOGGER = logging.getLogger(__name__)
 
 MULTI_CONF = True
-AUTO_LOAD = ["sensor", "binary_sensor"]
 
 DEPENDENCIES = ["i2c"]
 

@@ -1,9 +1,6 @@
 import esphome.codegen as cg
-import esphome.config_validation as cv
 from esphome.components import sensor
-
-from . import CONF_AXP202_ID, AXP202Component
-
+import esphome.config_validation as cv
 from esphome.const import (
     CONF_BATTERY_LEVEL,
     CONF_BATTERY_VOLTAGE,
@@ -16,6 +13,8 @@ from esphome.const import (
     UNIT_PERCENT,
     UNIT_VOLT,
 )
+
+from . import CONF_AXP202_ID, AXP202Component
 
 CONFIG_SCHEMA = cv.All(
     cv.Schema(

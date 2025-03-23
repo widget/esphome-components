@@ -61,7 +61,7 @@ void AXP202Component::checkInterrupts() {
     this->pek_press_ = 16;
 
     if (this->button_) {
-      this->button->publish_state(true);
+      this->button_->publish_state(true);
     }
   }
 
@@ -79,7 +79,7 @@ void AXP202Component::loop() {
     this->pek_press_--;
 
     if (!this->pek_press_ && this->button_) {
-      this->button->publish_state(false);
+      this->button_->publish_state(false);
     }
   }
 }

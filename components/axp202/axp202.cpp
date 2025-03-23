@@ -15,7 +15,7 @@ void AXP202Component::setup() {
     ESP_LOGD(TAG, "Setting interrupt");
     this->interrupt_pin_->pin_mode(gpio::FLAG_INPUT | gpio::FLAG_PULLUP);
     this->interrupt_pin_->setup();
-    this->store.irq = this->interrupt_pin_->to_isr();
+    this->store_.irq = this->interrupt_pin_->to_isr();
     this->interrupt_pin_->attach_interrupt(AXP202Store::gpio_intr, &this->store_, gpio::INTERRUPT_RISING_EDGE);
   }
 }

@@ -9,7 +9,7 @@ from esphome.const import (
     DEVICE_CLASS_BATTERY_CHARGING,
 )
 
-TYPES = ["charging", "usb"]
+TYPES = ["charging", "usb", CONF_BUTTON]
 
 CONFIG_SCHEMA = cv.All(
     cv.Schema(
@@ -19,6 +19,7 @@ CONFIG_SCHEMA = cv.All(
                 device_class=DEVICE_CLASS_BATTERY_CHARGING
             ),
             cv.Optional("usb"): binary_sensor.binary_sensor_schema(),
+            cv.Optional(CONF_BUTTON): binary_sensor.binary_sensor_schema(),
         }
     ).extend(cv.COMPONENT_SCHEMA)
 )
@@ -34,7 +35,3 @@ async def to_code(config):
     parent = await cg.get_variable(config[CONF_AXP202_ID])
     for key in TYPES:
         await setup_conf(config, key, parent)
-
-    if button_config := config.get(CONF_BUTTON):
-        sens = await binary_sensor.new_binary_sensor(button_config)
-        cg.add(parent.set_button(sens))

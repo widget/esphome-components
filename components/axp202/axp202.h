@@ -65,6 +65,7 @@ class AXP202Component : public PollingComponent, public i2c::I2CDevice {
   void publishUsb();
   bool GetBatState();
   bool GetVBusState();
+
   /*
   uint8_t  GetBatData();
 
@@ -118,6 +119,7 @@ class AXP202Component : public PollingComponent, public i2c::I2CDevice {
 
   void SetLDO4(bool State);
 
+  void checkInterrupts();
   void clearInterrupts();
   bool Write1Byte(uint8_t Addr, uint8_t Data);
   uint8_t Read8bit(uint8_t Addr);

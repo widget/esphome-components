@@ -12,7 +12,7 @@ void AXP202Component::setup() {
   begin(false, false);
 
   if (this->interrupt_pin_ != nullptr) {
-    ESP_LOGV(TAG, "Setting interrupt");
+    ESP_LOGD(TAG, "Setting interrupt");
     this->interrupt_pin_->pin_mode(gpio::FLAG_INPUT | gpio::FLAG_PULLUP);
     this->interrupt_pin_->setup();
     this->store_.irq = this->interrupt_pin_->to_isr();
@@ -36,32 +36,36 @@ void AXP202Component::publishUsb() {
   }
 }
 
+void AXP202Component::checkInterrupts() {
+  ESP_LOGI(TAG, "Servicing interrupt");
+
+  uint8_t irq = Read8bit(0x48);  // IRQ1
+  ESP_LOGD(TAG, "IRQ1: 0x%02x", irq);
+
+  if (irq & 0b1100) {
+    // USB changed
+    this->publishUsb();
+  }
+
+  irq = Read8bit(0x49);  // IRQ2
+  ESP_LOGD(TAG, "IRQ2: 0x%02x", irq);
+
+  if (irq & 0b1100) {
+    // Charging changed
+    this->publishCharging();
+  }
+
+  /* Not sure how to do PEK yet
+  irq = Read8bit(0x4a); // IRQ3
+    */
+  ESP_LOGD(TAG, "IRQ3: 0x%02x", irq);
+
+  clearInterrupts();
+}
+
 void AXP202Component::loop() {
   if (this->store_.trigger) {
-    ESP_LOGV(TAG, "Servicing interrupt");
-
-    uint8_t irq = Read8bit(0x48);  // IRQ1
-    ESP_LOGV(TAG, "IRQ1: 0x%02x", irq);
-
-    if (irq & 0b1100) {
-      // USB changed
-      this->publishUsb();
-    }
-
-    irq = Read8bit(0x49);  // IRQ2
-    ESP_LOGV(TAG, "IRQ2: 0x%02x", irq);
-
-    if (irq & 0b1100) {
-      // Charging changed
-      this->publishCharging();
-    }
-
-    /* Not sure how to do PEK yet
-    irq = Read8bit(0x4a); // IRQ3
-     */
-    ESP_LOGV(TAG, "IRQ3: 0x%02x", irq);
-
-    clearInterrupts();
+    checkInterrupts();
     this->store_.trigger = false;
   }
 }
@@ -87,6 +91,9 @@ void AXP202Component::dump_config() {
   if (this->usb_) {
     LOG_BINARY_SENSOR("  ", "Vusb usable:", this->usb_);
   }
+  if (this->button_) {
+    LOG_BINARY_SENSOR("  ", "PEK (button) usable:", this->button_);
+  }
   LOG_UPDATE_INTERVAL(this);
 }
 
@@ -96,10 +103,12 @@ void AXP202Component::update() {
   bool batt_present = GetBatState();
   bool bus_present = GetVBusState();
 
+  checkInterrupts();
+
   if (this->bus_voltage_sensor_ != nullptr) {
     if (bus_present) {
       float vbus = GetVBusVoltage();
-      ESP_LOGD(TAG, "Got Bus Voltage=%.2fV", vbus);
+      ESP_LOGV(TAG, "Got Bus Voltage=%.2fV", vbus);
 
       this->bus_voltage_sensor_->publish_state(vbus);
     } else {
@@ -111,7 +120,7 @@ void AXP202Component::update() {
   if (this->battery_voltage_sensor_ != nullptr) {
     if (batt_present) {
       float vbat = GetBatVoltage();
-      ESP_LOGD(TAG, "Got Battery Voltage=%.2fV", vbat);
+      ESP_LOGV(TAG, "Got Battery Voltage=%.2fV", vbat);
       this->battery_voltage_sensor_->publish_state(vbat);
     } else {
       ESP_LOGD(TAG, "Battery Voltage not present");
@@ -122,7 +131,7 @@ void AXP202Component::update() {
   if (this->battery_level_sensor_ != nullptr) {
     if (batt_present) {
       uint8_t batterylevel = GetFuelGauge();
-      ESP_LOGD(TAG, "Got Battery Level=%d", batterylevel);
+      ESP_LOGV(TAG, "Got Battery Level=%d", batterylevel);
       this->battery_level_sensor_->publish_state(float(batterylevel));
     } else {
       ESP_LOGD(TAG, "Battery not present");
@@ -140,7 +149,7 @@ void AXP202Component::clearInterrupts() {
 }
 
 void AXP202Component::begin(bool disableLDO2, bool disableLDO3) {
-  ESP_LOGD(TAG, "Setting LDO2/3 voltages");
+  ESP_LOGI(TAG, "Setting LDO2/3 voltages");
   // Set LDO2 & LDO3(TFT_LED & TFT) 3.0V
   Write1Byte(0x28, 0xcc);
   Write1Byte(0x29, 0x80);  // Follow LDO3IN
@@ -168,7 +177,6 @@ void AXP202Component::begin(bool disableLDO2, bool disableLDO3) {
 
   // TODO rephrase this code I think
   // Depending on configuration enable LDO2, LDO3
-  ESP_LOGD(TAG, "Enabling power lines");
   uint8_t buf = (Read8bit(0x12) & 0xef) | 0x4D;
   if (disableLDO3)
     buf &= ~(1 << 6);
@@ -269,7 +277,7 @@ uint32_t AXP202Component::Read32bit(uint8_t Addr) {
 void AXP202Component::ReadBuff(uint8_t Addr, uint8_t Size, uint8_t *Buff) { this->read_bytes(Addr, Buff, Size); }
 
 void AXP202Component::UpdateBrightness() {
-  ESP_LOGD(TAG, "Brightness=%f (Curr: %f)", brightness_, curr_brightness_);
+  ESP_LOGV(TAG, "Brightness=%f (Curr: %f)", brightness_, curr_brightness_);
   if (brightness_ == curr_brightness_) {
     return;
   }
@@ -283,7 +291,7 @@ void AXP202Component::UpdateBrightness() {
     ubri = c_max;
   }
   uint8_t buf = Read8bit(0x28);
-  ESP_LOGD(TAG, "Setting brightness to %d", ubri);
+  ESP_LOGV(TAG, "Setting brightness to %d", ubri);
   Write1Byte(0x28, ((buf & 0x0f) | (ubri << 4)));
 }
 

@@ -212,6 +212,11 @@ void AXP202Component::begin(bool disableLDO2, bool disableLDO3) {
   // Validate VBUS voltage to 4.45V.  Session detection off, charge/discharge resistance left off
   Write1Byte(0x8b, 0x20);
 
+  // Enable the coulomb counter - enables fuel gauge maybe?
+  Write1Byte(0xb8, 0x80);
+  // Enable fuel gauge (but it defaults on)
+  Write1Byte(0xb9, 0x00);
+
   // GPIO0 is connected to AGND, others are N/C
 
   // TODO How do we service an interrupt to read the pins?

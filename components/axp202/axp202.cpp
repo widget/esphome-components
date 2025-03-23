@@ -10,17 +10,83 @@ static const char *TAG = "axp202.sensor";
 void AXP202Component::setup() {
   ESP_LOGD(TAG, "Starting up");
   begin(false, false);
+
+  if (this->interrupt_pin_ != nullptr) {
+    ESP_LOGD(TAG, "Setting interrupt");
+    this->interrupt_pin_->pin_mode(gpio::FLAG_INPUT | gpio::FLAG_PULLUP);
+    this->interrupt_pin_->setup();
+    this->store_->irq = this->interrupt_pin_->to_isr();
+    this->interrupt_pin_->attach_interrupt(AXP202Store::gpio_intr, &this->store_, gpio::INTERRUPT_RISING_EDGE);
+  }
 }
+
+void AXP202Component::publishCharging() {
+  uint8_t chrg = Read8bit(0x1);
+  if (this->charging_) {
+    this->charging_->publish_state(chrg & 0x20);
+  }
+}
+
+void AXP202Component::publishUsb() {
+  uint8_t pwr = Read8bit(0x0);
+  if (this->usb_) {
+    this->usb_->publish_state(pwr & 0b10000);  // VBus usable
+  }
+}
+
+void AXP202Component::loop() {
+  if (this->store_.trigger) {
+    ESP_LOGV(TAG, "Servicing interrupt");
+
+    uint8_t irq = Read8bit(0x48);  // IRQ1
+    ESP_LOGV(TAG, "IRQ1: 0x%02x", irq);
+
+    if (irq & 0b1100) {
+      // USB changed
+      this->publishUsb();
+    }
+
+    irq = Read8bit(0x49);  // IRQ2
+    ESP_LOGV(TAG, "IRQ2: 0x%02x", irq);
+
+    if (irq & 0b1100) {
+      // Charging changed
+      this->publishCharging();
+    }
+
+    /* Not sure how to do PEK yet
+    irq = Read8bit(0x4a); // IRQ3
+     */
+    ESP_LOGV(TAG, "IRQ3: 0x%02x", irq);
+
+    clearInterrupts();
+
+    this->store_.trigger = false;
+  }
+}
+
+void IRAM_ATTR HOT AXP202Store::gpio_intr(AXP202Store *arg) { arg->trigger = true; }
 
 void AXP202Component::dump_config() {
   ESP_LOGCONFIG(TAG, "AXP202:");
   LOG_I2C_DEVICE(this);
+  LOG_PIN("Interrupt Pin: ", this->interrupt_pin_);
+  if (this->bus_voltage_sensor_) {
+    LOG_SENSOR("  ", "Bus Voltage", this->bus_voltage_sensor_);
+  }
   if (this->battery_voltage_sensor_) {
-    LOG_SENSOR("  ", "Voltage", this->battery_voltage_sensor_);
+    LOG_SENSOR("  ", "Battery Voltage", this->battery_voltage_sensor_);
   }
   if (this->battery_level_sensor_) {
     LOG_SENSOR("  ", "Battery Level", this->battery_level_sensor_);
   }
+  if (this->charging_) {
+    LOG_BINARY_SENSOR("  ", "Battery Charging", this->charging_);
+  }
+  if (this->usb_) {
+    LOG_BINARY_SENSOR("  ", "Vusb usable", this->usb_);
+  }
+  LOG_UPDATE_INTERVAL(this);
 }
 
 float AXP202Component::get_setup_priority() const { return setup_priority::DATA; }
@@ -64,6 +130,12 @@ void AXP202Component::update() {
   }
 
   // UpdateBrightness();
+}
+
+void AXP202Component::clearInterrupts() {
+  uint8_t zeroes[5] = {0};
+
+  write_bytes(0x49, zeroes, 5);
 }
 
 void AXP202Component::begin(bool disableLDO2, bool disableLDO3) {
@@ -110,20 +182,33 @@ void AXP202Component::begin(bool disableLDO2, bool disableLDO3) {
   //  Not using EXTEN
   buf &= ~(1 << 0);
   ESP_LOGD(TAG, "Enabling power lines: 0x%x", buf);
-  Write1Byte(0x12, buf);
+  if (!Write1Byte(0x12, buf)) {
+    ESP_LOGC(TAG, "Failed to write!");
+    mark_failed();
+  }
 
   // Validate VBUS voltage to 4.45V.  Session detection off, charge/discharge resistance left off
   Write1Byte(0x8b, 0x20);
+
   // GPIO0 is connected to AGND, others are N/C
 
   // TODO How do we service an interrupt to read the pins?
+  Write1Byte(0x40, 0b1100);  // IRQ1 VBus presence and loss
+  Write1Byte(0x41, 0b1100);  // IRQ2 Charging presence and loss
+  Write1Byte(0x42, 0b11);    // IRQ3 just the PEK short and long press
+  Write1Byte(0x43, 0x0);     // IRQ4
+  // IRQ5 default off
+
+  clearInterrupts();
 
   // Coulomb counter is disabled
 
   // There is a backup battery for the RTC on LDO1 which is not s/w controllable
+  publishCharging();
+  publishUsb();
 }
 
-void AXP202Component::Write1Byte(uint8_t Addr, uint8_t Data) { this->write_byte(Addr, Data); }
+bool AXP202Component::Write1Byte(uint8_t Addr, uint8_t Data) { return this->write_byte(Addr, Data); }
 
 uint8_t AXP202Component::Read8bit(uint8_t Addr) {
   uint8_t data;

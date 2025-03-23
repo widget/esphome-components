@@ -1,25 +1,37 @@
-#ifndef __AXP202_H__
-#define __AXP202_H__
+#pragma once
 
 #include "esphome/core/component.h"
 #include "esphome/components/sensor/sensor.h"
+#include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/i2c/i2c.h"
 
 namespace esphome {
 namespace axp202 {
 
+struct AXP202Store {
+  ISRInternalGPIOPin irq;
+  volatile bool trigger{false};
+
+  static void gpio_intr(AXP202Store *arg);
+};
+
 class AXP202Component : public PollingComponent, public i2c::I2CDevice {
  public:
+  void set_interrupt_pin(InternalGPIOPin *pin) { this->interrupt_pin_ = pin; }
   void set_battery_level_sensor(sensor::Sensor *battery_level_sensor) { battery_level_sensor_ = battery_level_sensor; }
   void set_battery_voltage_sensor(sensor::Sensor *battery_voltage_sensor) {
     battery_voltage_sensor_ = battery_voltage_sensor;
   }
+  void set_usb_binary_sensor(binary_sensor::BinarySensor *usb) { usb_ = usb; }
+  void set_charging_binary_sensor(binary_sensor::BinarySensor *charging) { charging_ = charging; }
+  void set_button_binary_sensor(binary_sensor::BinarySensor *button) { button_ = button; }
   void set_bus_voltage_sensor(sensor::Sensor *bus_voltage_sensor) { bus_voltage_sensor_ = bus_voltage_sensor; }
   void set_brightness(float brightness) { brightness_ = brightness; }
 
   // ========== INTERNAL METHODS ==========
   // (In most use cases you won't need these)
   void setup() override;
+  void loop() override;
   void dump_config() override;
   float get_setup_priority() const override;
   void update() override;
@@ -31,8 +43,14 @@ class AXP202Component : public PollingComponent, public i2c::I2CDevice {
   sensor::Sensor *battery_level_sensor_{nullptr};
   sensor::Sensor *battery_voltage_sensor_{nullptr};
   sensor::Sensor *bus_voltage_sensor_{nullptr};
+  binary_sensor::BinarySensor *button_{nullptr};
+  binary_sensor::BinarySensor *charging_{nullptr};
+  binary_sensor::BinarySensor *usb_{nullptr};
   float brightness_{1.0f};
   float curr_brightness_{-1.0f};
+
+  InternalGPIOPin *interrupt_pin_{nullptr};
+  AXP202Store store_{};
 
   /**
    * LDO2: Display backlight
@@ -97,7 +115,8 @@ class AXP202Component : public PollingComponent, public i2c::I2CDevice {
 
   void SetLDO4(bool State);
 
-  void Write1Byte(uint8_t Addr, uint8_t Data);
+  void clearInterrupts();
+  bool Write1Byte(uint8_t Addr, uint8_t Data);
   uint8_t Read8bit(uint8_t Addr);
   uint16_t Read12Bit(uint8_t Addr);
   uint16_t Read13Bit(uint8_t Addr);
@@ -109,5 +128,3 @@ class AXP202Component : public PollingComponent, public i2c::I2CDevice {
 
 }  // namespace axp202
 }  // namespace esphome
-
-#endif

@@ -25,14 +25,20 @@ AXP202Component = axp202_ns.class_(
 
 CONF_AXP202_ID = "axp202_id"
 
-CONFIG_SCHEMA = cv.Schema(
-    {
-        cv.GenerateID(): cv.declare_id(AXP202Component),
-        cv.Optional("backlight", default=False): cv.boolean,
-        cv.Optional(CONF_SPEAKER, default=False): cv.boolean,
-        cv.Optional(CONF_INTERRUPT_PIN): cv.All(pins.internal_gpio_input_pin_schema),
-    }
-).extend(i2c.i2c_device_schema(0x35))
+CONFIG_SCHEMA = (
+    cv.Schema(
+        {
+            cv.GenerateID(): cv.declare_id(AXP202Component),
+            cv.Optional("backlight", default=False): cv.boolean,
+            cv.Optional(CONF_SPEAKER, default=False): cv.boolean,
+            cv.Optional(CONF_INTERRUPT_PIN): cv.All(
+                pins.internal_gpio_input_pin_schema
+            ),
+        }
+    )
+    .extend(i2c.i2c_device_schema(0x35))
+    .extend(cv.polling_component_schema("60s"))
+)
 
 
 async def to_code(config):

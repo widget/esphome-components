@@ -17,33 +17,35 @@ from esphome.const import (
     UNIT_VOLT,
 )
 
-CONFIG_SCHEMA = cv.Schema(
-    {
-        cv.GenerateID(CONF_AXP202_ID): cv.use_id(AXP202Component),
-        cv.Optional(CONF_BATTERY_VOLTAGE): sensor.sensor_schema(
-            unit_of_measurement=UNIT_VOLT,
-            accuracy_decimals=2,
-            device_class=DEVICE_CLASS_VOLTAGE,
-            state_class=STATE_CLASS_MEASUREMENT,
-            entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
-        ),
-        cv.Optional(CONF_BUS_VOLTAGE): sensor.sensor_schema(
-            unit_of_measurement=UNIT_VOLT,
-            accuracy_decimals=2,
-            device_class=DEVICE_CLASS_VOLTAGE,
-            state_class=STATE_CLASS_MEASUREMENT,
-            entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
-        ),
-        cv.Optional(CONF_BATTERY_LEVEL): sensor.sensor_schema(
-            unit_of_measurement=UNIT_PERCENT,
-            accuracy_decimals=0,
-            device_class=DEVICE_CLASS_BATTERY,
-            state_class=STATE_CLASS_MEASUREMENT,
-            entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
-            icon=ICON_BATTERY,
-        ),
-    }
-).extend(cv.polling_component_schema("60s"))
+CONFIG_SCHEMA = cv.All(
+    cv.Schema(
+        {
+            cv.GenerateID(CONF_AXP202_ID): cv.use_id(AXP202Component),
+            cv.Optional(CONF_BATTERY_VOLTAGE): sensor.sensor_schema(
+                unit_of_measurement=UNIT_VOLT,
+                accuracy_decimals=2,
+                device_class=DEVICE_CLASS_VOLTAGE,
+                state_class=STATE_CLASS_MEASUREMENT,
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+            ),
+            cv.Optional(CONF_BUS_VOLTAGE): sensor.sensor_schema(
+                unit_of_measurement=UNIT_VOLT,
+                accuracy_decimals=2,
+                device_class=DEVICE_CLASS_VOLTAGE,
+                state_class=STATE_CLASS_MEASUREMENT,
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+            ),
+            cv.Optional(CONF_BATTERY_LEVEL): sensor.sensor_schema(
+                unit_of_measurement=UNIT_PERCENT,
+                accuracy_decimals=0,
+                device_class=DEVICE_CLASS_BATTERY,
+                state_class=STATE_CLASS_MEASUREMENT,
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                icon=ICON_BATTERY,
+            ),
+        }
+    ).extend(cv.COMPONENT_SCHEMA)
+)
 
 
 async def to_code(config):

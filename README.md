@@ -13,7 +13,8 @@ This is not the same as the V2 or V3!
 - Test YAML power control
 - Why is the Fuel gauge returning 127?  Docs say percentage
 - Non-polling support
-  - Button
+  - Button click?
+  - interrupt isn't working
 
 ## Detail
 
@@ -105,20 +106,29 @@ speaker:
     i2s_audio_id: i2s_out
     i2s_dout_pin: 33
 
+axp202:
+  i2c_id: tt_sensor
+  backlight: true
+  speaker: false
+  interrupt_pin:
+      number: 35
+
+binary_sensor:
+  - platform: axp202
+    charging:
+      name: charging
+    usb:
+      name: usb
+
 sensor:
   # this turns on power but doesn't actually need brightness control as that's done later
   - platform: axp202
-    id: pmc
-    i2c_id: tt_sensor
     bus_voltage:
       name: "USB Voltage"
     battery_voltage:
       name: "Battery Voltage"
     battery_level:
       name: "Battery"
-    backlight: true
-    speaker: false
-
 
 output:
   - platform: ledc

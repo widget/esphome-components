@@ -15,7 +15,7 @@ void AXP202Component::setup() {
     ESP_LOGD(TAG, "Setting interrupt");
     this->interrupt_pin_->pin_mode(gpio::FLAG_INPUT | gpio::FLAG_PULLUP);
     this->interrupt_pin_->setup();
-    this->store_->irq = this->interrupt_pin_->to_isr();
+    this->store.irq = this->interrupt_pin_->to_isr();
     this->interrupt_pin_->attach_interrupt(AXP202Store::gpio_intr, &this->store_, gpio::INTERRUPT_RISING_EDGE);
   }
 }
@@ -183,7 +183,7 @@ void AXP202Component::begin(bool disableLDO2, bool disableLDO3) {
   buf &= ~(1 << 0);
   ESP_LOGD(TAG, "Enabling power lines: 0x%x", buf);
   if (!Write1Byte(0x12, buf)) {
-    ESP_LOGC(TAG, "Failed to write!");
+    ESP_LOGW(TAG, "Failed to write!");
     mark_failed();
   }
 

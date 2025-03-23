@@ -16,7 +16,7 @@ void AXP202Component::setup() {
     this->interrupt_pin_->pin_mode(gpio::FLAG_INPUT | gpio::FLAG_PULLUP);
     this->interrupt_pin_->setup();
     this->store_.irq = this->interrupt_pin_->to_isr();
-    this->interrupt_pin_->attach_interrupt(AXP202Store::gpio_intr, &this->store_, gpio::INTERRUPT_RISING_EDGE);
+    this->interrupt_pin_->attach_interrupt(AXP202Store::gpio_intr, &this->store_, gpio::INTERRUPT_FALLING_EDGE);
   } else {
     ESP_LOGW(TAG, "No interrupt pin configured!");
   }
@@ -134,9 +134,9 @@ void AXP202Component::update() {
 }
 
 void AXP202Component::clearInterrupts() {
-  uint8_t zeroes[5] = {0};
+  uint8_t ones[5] = {0xff};
 
-  write_bytes(0x49, zeroes, 5);
+  write_bytes(0x49, ones, 5);
 }
 
 void AXP202Component::begin(bool disableLDO2, bool disableLDO3) {

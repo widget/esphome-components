@@ -23,21 +23,21 @@ void AXP202Component::setup() {
 }
 
 void AXP202Component::publishCharging() {
-  uint8_t chrg = Read8bit(0x1);
   if (this->charging_) {
-    this->charging_->publish_state(chrg & 0x20);
+    uint8_t chrg = Read8bit(0x1);
+    this->charging_->publish_state(chrg & 0x40);
   }
 }
 
 void AXP202Component::publishUsb() {
-  uint8_t pwr = Read8bit(0x0);
   if (this->usb_) {
+    uint8_t pwr = Read8bit(0x0);
     this->usb_->publish_state(pwr & 0b10000);  // VBus usable
   }
 }
 
 void AXP202Component::checkInterrupts() {
-  ESP_LOGD(TAG, "Checking IRQs");
+  ESP_LOGV(TAG, "Checking IRQs");
 
   uint8_t irq = Read8bit(0x48);  // IRQ1
   ESP_LOGD(TAG, "IRQ1: 0x%02x", irq);
@@ -155,7 +155,7 @@ void AXP202Component::update() {
 }
 
 void AXP202Component::clearInterrupts() {
-  ESP_LOGD(TAG, "Clearing interrupts");
+  ESP_LOGV(TAG, "Clearing interrupts");
   for (uint8_t irq_addr = 0x48; irq_addr < 0x4d; irq_addr++) {
     Write1Byte(irq_addr, 0xff);
   }

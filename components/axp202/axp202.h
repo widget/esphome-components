@@ -49,6 +49,7 @@ class AXP202Component : public PollingComponent, public i2c::I2CDevice {
   binary_sensor::BinarySensor *usb_{nullptr};
   float brightness_{1.0f};
   float curr_brightness_{-1.0f};
+  unsigned int pek_press_{0};
 
   InternalGPIOPin *interrupt_pin_{nullptr};
   AXP202Store store_;

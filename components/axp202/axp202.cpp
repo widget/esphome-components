@@ -55,10 +55,15 @@ void AXP202Component::checkInterrupts() {
     this->publishCharging();
   }
 
-  /* Not sure how to do PEK yet
-  irq = Read8bit(0x4a); // IRQ3
-    */
+  irq = Read8bit(0x4a);  // IRQ3
   ESP_LOGD(TAG, "IRQ3: 0x%02x", irq);
+  if (irq & 0x3) {
+    this->pek_press_ = 16;
+
+    if (this->button_) {
+      this->button->publish_state(true);
+    }
+  }
 
   clearInterrupts();
 }
@@ -68,6 +73,14 @@ void AXP202Component::loop() {
     ESP_LOGI(TAG, "Servicing interrupt");
     checkInterrupts();
     this->store_.trigger = false;
+  }
+
+  if (this->pek_press_ > 0) {
+    this->pek_press_--;
+
+    if (!this->pek_press_ && this->button_) {
+      this->button->publish_state(false);
+    }
   }
 }
 
@@ -103,8 +116,6 @@ float AXP202Component::get_setup_priority() const { return setup_priority::DATA;
 void AXP202Component::update() {
   bool batt_present = GetBatState();
   bool bus_present = GetVBusState();
-
-  checkInterrupts();
 
   if (this->bus_voltage_sensor_ != nullptr) {
     if (bus_present) {

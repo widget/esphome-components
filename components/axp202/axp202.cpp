@@ -346,7 +346,7 @@ float AXP202Component::GetBatChargeCurrent() {
 }
 
 bool AXP202Component::GetVBusState() {
-  if (Read8bit(0x0) | 0x20)
+  if (Read8bit(0x0) & 0x20)
     return true;
   else
     return false;

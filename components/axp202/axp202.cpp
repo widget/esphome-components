@@ -134,7 +134,7 @@ void AXP202Component::update() {
   }
 
   if (this->battery_current_sensor_ != nullptr) {
-    if (batt_present) {
+    if (batt_present && (Read8bit(0x1) & 0x40)) {
       this->battery_current_sensor_->publish_state(GetBatDischargeCurrent());
     } else {
       this->battery_current_sensor_->publish_state(NAN);

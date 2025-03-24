@@ -91,24 +91,16 @@ void AXP202Component::dump_config() {
   ESP_LOGCONFIG(TAG, "AXP202:");
   LOG_I2C_DEVICE(this);
   LOG_PIN("  Interrupt Pin: ", this->interrupt_pin_);
-  if (this->bus_voltage_sensor_) {
-    LOG_SENSOR("  ", "Bus Voltage:", this->bus_voltage_sensor_);
-  }
-  if (this->battery_voltage_sensor_) {
-    LOG_SENSOR("  ", "Battery Voltage:", this->battery_voltage_sensor_);
-  }
-  if (this->battery_level_sensor_) {
-    LOG_SENSOR("  ", "Battery Level:", this->battery_level_sensor_);
-  }
-  if (this->charging_) {
-    LOG_BINARY_SENSOR("  ", "Battery Charging:", this->charging_);
-  }
-  if (this->usb_) {
-    LOG_BINARY_SENSOR("  ", "Vusb usable:", this->usb_);
-  }
-  if (this->button_) {
-    LOG_BINARY_SENSOR("  ", "PEK (button) usable:", this->button_);
-  }
+
+  LOG_SENSOR("  ", "Bus Voltage:", this->bus_voltage_sensor_);
+  LOG_SENSOR("  ", "Battery Voltage:", this->battery_voltage_sensor_);
+  LOG_SENSOR("  ", "Battery Current:", this->battery_current_sensor_);
+  LOG_SENSOR("  ", "Battery Level:", this->battery_level_sensor_);
+
+  LOG_BINARY_SENSOR("  ", "Battery Charging:", this->charging_);
+  LOG_BINARY_SENSOR("  ", "Vusb usable:", this->usb_);
+  LOG_BINARY_SENSOR("  ", "PEK (button) usable:", this->button_);
+
   LOG_UPDATE_INTERVAL(this);
 }
 
@@ -136,8 +128,16 @@ void AXP202Component::update() {
       ESP_LOGV(TAG, "Got Battery Voltage=%.2fV", vbat);
       this->battery_voltage_sensor_->publish_state(vbat);
     } else {
-      ESP_LOGD(TAG, "Battery Voltage not present");
+      ESP_LOGD(TAG, "Battery not present");
       this->battery_voltage_sensor_->publish_state(NAN);
+    }
+  }
+
+  if (this->battery_current_sensor_ != nullptr) {
+    if (batt_present) {
+      this->battery_current_sensor_->publish_state(GetBatDischargeCurrent());
+    } else {
+      this->battery_current_sensor_->publish_state(NAN);
     }
   }
 
@@ -213,11 +213,10 @@ void AXP202Component::begin(bool disableLDO2, bool disableLDO3) {
     mark_failed();
   }
 
+  // Coulomb counter is disabled
+
   // Validate VBUS voltage to 4.45V.  Session detection off, charge/discharge resistance left off
   Write1Byte(0x8b, 0x20);
-
-  // "work suspension" set?
-  // Write1Byte(0xb9, 0x80);
 
   // GPIO0 is connected to AGND, others are N/C
 
@@ -229,8 +228,6 @@ void AXP202Component::begin(bool disableLDO2, bool disableLDO3) {
   // IRQ5 default off
 
   clearInterrupts();
-
-  // Coulomb counter is disabled
 
   // There is a backup battery for the RTC on LDO1 which is not s/w controllable
   publishCharging();
@@ -337,9 +334,9 @@ float AXP202Component::GetBatVoltage() {
   return ReData * ADCLSB;
 }
 
-float AXP202Component::GetBatChargeCurrent() {
+float AXP202Component::GetBatDischargeCurrent() {
   float ADCLSB = 0.5;
-  uint16_t ReData = Read13Bit(0x7A);
+  uint16_t ReData = Read13Bit(0x7C);
   return ReData * ADCLSB;
 }
 

@@ -20,6 +20,9 @@ class AXP202Component : public PollingComponent, public i2c::I2CDevice {
  public:
   void set_interrupt_pin(InternalGPIOPin *pin) { this->interrupt_pin_ = pin; }
   void set_battery_level_sensor(sensor::Sensor *battery_level_sensor) { battery_level_sensor_ = battery_level_sensor; }
+  void set_battery_current_sensor(sensor::Sensor *battery_current_sensor) {
+    battery_current_sensor_ = battery_current_sensor;
+  }
   void set_battery_voltage_sensor(sensor::Sensor *battery_voltage_sensor) {
     battery_voltage_sensor_ = battery_voltage_sensor;
   }
@@ -42,6 +45,7 @@ class AXP202Component : public PollingComponent, public i2c::I2CDevice {
 
  protected:
   sensor::Sensor *battery_level_sensor_{nullptr};
+  sensor::Sensor *battery_current_sensor_{nullptr};
   sensor::Sensor *battery_voltage_sensor_{nullptr};
   sensor::Sensor *bus_voltage_sensor_{nullptr};
   binary_sensor::BinarySensor *button_{nullptr};
@@ -109,7 +113,7 @@ class AXP202Component : public PollingComponent, public i2c::I2CDevice {
   void SetChargeCurrent(uint8_t);
 
   float GetBatVoltage();
-  float GetBatChargeCurrent();
+  float GetBatDischargeCurrent();
   uint8_t GetFuelGauge();
   float GetBatCurrent();
   float GetVinVoltage();

@@ -11,17 +11,14 @@ This is not the same as the V2 or V3!
 ## TODO
 
 - Test YAML power control
-  - Replace booleans with switches
-- Why is the Fuel gauge returning 127 when it's not charging?  Docs say percentage
-- Non-polling support
-  - usb disconnect doesn't send a charge cancelled interrupt
+  - Replace booleans with switches?
 
 ## Detail
 
 The AXP202 controls power lines and battery/voltage/charging information on the watch.
 The absolute minimum it needs to do for the watch is enable LDO2 at 3.3V to run the backlight.
 
-It is not reading the PEK button, it only polls voltages.
+Coulomb counter isn't used, bus current isn't used.
 
 Some information also available [here (fr)](http://destroyedlolo.info/ESP/Tech%20TWatch/)
 

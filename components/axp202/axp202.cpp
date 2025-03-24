@@ -144,7 +144,7 @@ void AXP202Component::update() {
   if (this->battery_level_sensor_ != nullptr) {
     if (batt_present) {
       uint8_t batterylevel = GetFuelGauge();
-      if (batterylevel == 0x0) {
+      if (batterylevel > 100) {
         this->battery_level_sensor_->publish_state(NAN);
       } else {
         this->battery_level_sensor_->publish_state(float(batterylevel));
@@ -178,7 +178,7 @@ void AXP202Component::begin(bool disableLDO2, bool disableLDO3) {
 
   // Set ADC to All Enable. Battery voltage, VBUS, APS voltage, TS pin ADC.
   // Could enable current measurement
-  Write1Byte(0x82, 0b10001011);
+  Write1Byte(0x82, 0b11001011);
 
   // Enable bat detection, CHGLED disabled (there isn't one)
   Write1Byte(0x32, 0x46);
@@ -216,10 +216,8 @@ void AXP202Component::begin(bool disableLDO2, bool disableLDO3) {
   // Validate VBUS voltage to 4.45V.  Session detection off, charge/discharge resistance left off
   Write1Byte(0x8b, 0x20);
 
-  // Enable the coulomb counter - enables fuel gauge maybe?
-  Write1Byte(0xb8, 0x80);
-  // Enable fuel gauge (but it defaults on)
-  Write1Byte(0xb9, 0x00);
+  // "work suspension" set?
+  // Write1Byte(0xb9, 0x80);
 
   // GPIO0 is connected to AGND, others are N/C
 

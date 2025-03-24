@@ -7,6 +7,8 @@ from . import CONF_AXP202_ID, AXP202Component
 from esphome.const import (
     CONF_BUTTON,
     DEVICE_CLASS_BATTERY_CHARGING,
+    DEVICE_CLASS_POWER,
+    ICON_POWER,
 )
 
 TYPES = ["charging", "usb", CONF_BUTTON]
@@ -18,7 +20,9 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional("charging"): binary_sensor.binary_sensor_schema(
                 device_class=DEVICE_CLASS_BATTERY_CHARGING
             ),
-            cv.Optional("usb"): binary_sensor.binary_sensor_schema(),
+            cv.Optional("usb"): binary_sensor.binary_sensor_schema(
+                icon=ICON_POWER, device_class=DEVICE_CLASS_POWER
+            ),
             cv.Optional(CONF_BUTTON): binary_sensor.binary_sensor_schema(),
         }
     ).extend(cv.COMPONENT_SCHEMA)

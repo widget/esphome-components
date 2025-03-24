@@ -11,14 +11,14 @@ This is not the same as the V2 or V3!
 ## TODO
 
 - Test YAML power control
-- Why is the Fuel gauge returning 127?  Docs say percentage
+  - Replace booleans with switches
+- Why is the Fuel gauge returning 127 when it's not charging?  Docs say percentage
 - Non-polling support
-  - Button click?
-  - interrupt isn't working
+  - usb disconnect doesn't send a charge cancelled interrupt
 
 ## Detail
 
-The AXP202 controls power lines and battery information on the watch.
+The AXP202 controls power lines and battery/voltage/charging information on the watch.
 The absolute minimum it needs to do for the watch is enable LDO2 at 3.3V to run the backlight.
 
 It is not reading the PEK button, it only polls voltages.

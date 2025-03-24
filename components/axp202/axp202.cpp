@@ -31,26 +31,27 @@ void AXP202Component::publishCharging() {
 
 void AXP202Component::publishUsb() {
   if (this->usb_) {
-    uint8_t pwr = Read8bit(0x0);
-    this->usb_->publish_state(pwr & 0b10000);  // VBus usable
+    this->usb_->publish_state(GetVBusState());
   }
 }
 
 void AXP202Component::checkInterrupts() {
   ESP_LOGV(TAG, "Checking IRQs");
 
+  bool force_charging_update = false;
   uint8_t irq = Read8bit(0x48);  // IRQ1
   ESP_LOGD(TAG, "IRQ1: 0x%02x", irq);
 
   if (irq & 0b1100) {
     // USB changed
     this->publishUsb();
+    force_charging_update = true;
   }
 
   irq = Read8bit(0x49);  // IRQ2
   ESP_LOGD(TAG, "IRQ2: 0x%02x", irq);
 
-  if (irq & 0b1100) {
+  if (force_charging_update || (irq & 0b1100)) {
     // Charging changed
     this->publishCharging();
   }
@@ -143,8 +144,11 @@ void AXP202Component::update() {
   if (this->battery_level_sensor_ != nullptr) {
     if (batt_present) {
       uint8_t batterylevel = GetFuelGauge();
-      ESP_LOGV(TAG, "Got Battery Level=%d", batterylevel);
-      this->battery_level_sensor_->publish_state(float(batterylevel));
+      if (batterylevel == 0x0) {
+        this->battery_level_sensor_->publish_state(NAN);
+      } else {
+        this->battery_level_sensor_->publish_state(float(batterylevel));
+      }
     } else {
       ESP_LOGD(TAG, "Battery not present");
       this->battery_level_sensor_->publish_state(NAN);
@@ -320,7 +324,14 @@ bool AXP202Component::GetBatState() {
     return false;
 }
 
-uint8_t AXP202Component::GetFuelGauge() { return Read8bit(0xb9) & 0x7f; }
+uint8_t AXP202Component::GetFuelGauge() {
+  uint8_t fuel = Read8bit(0xb9);
+  ESP_LOGD(TAG, "Got Battery Level=%d", fuel);
+  if (fuel & 0x80) {
+    return 0;
+  }
+  return fuel & 0x7f;
+}
 
 float AXP202Component::GetBatVoltage() {
   float ADCLSB = 1.1 / 1000.0;
@@ -357,10 +368,10 @@ float AXP202Component::GetTempInternal() {
 void AXP202Component::SetLDO2(bool State) {
   uint8_t buf = Read8bit(0x12);
   if (State == true) {
-    ESP_LOGD(TAG, "Enabling LDO2");
+    ESP_LOGV(TAG, "Enabling LDO2");
     buf = (1 << 2) | buf;
   } else {
-    ESP_LOGD(TAG, "Disabling LDO2");
+    ESP_LOGV(TAG, "Disabling LDO2");
     buf = ~(1 << 2) & buf;
   }
   Write1Byte(0x12, buf);
@@ -369,10 +380,10 @@ void AXP202Component::SetLDO2(bool State) {
 void AXP202Component::SetLDO3(bool State) {
   uint8_t buf = Read8bit(0x12);
   if (State == true) {
-    ESP_LOGD(TAG, "Enabling LDO3");
+    ESP_LOGV(TAG, "Enabling LDO3");
     buf = (1 << 6) | buf;
   } else {
-    ESP_LOGD(TAG, "Disabling LDO3");
+    ESP_LOGV(TAG, "Disabling LDO3");
     buf = ~(1 << 6) & buf;
   }
   Write1Byte(0x12, buf);
@@ -395,21 +406,7 @@ void AXP202Component::SetChargeCurrent(uint8_t current) {
 }
 
 /*
-uint8_t AXP202Component::GetBatData()
-{
-    // Register not defined
-    return Read8bit(0x75);
-}*/
 
-/*---------coulombcounter_from_here---------
-//enable: void EnableCoulombcounter(void);
-//disable: void DisableCOulombcounter(void);
-//stop: void StopCoulombcounter(void);
-//clear: void ClearCoulombcounter(void);
-//get charge data: uint32_t GetCoulombchargeData(void);
-//get discharge data: uint32_t GetCoulombdischargeData(void);
-//get coulomb val affter calculation: float GetCoulombData(void);
-//------------------------------------------
 void  AXP202Component::EnableCoulombcounter(void)
 {
     Write1Byte( 0xB8 , 0x80 );

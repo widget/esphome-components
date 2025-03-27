@@ -1,6 +1,7 @@
-# esphome-components
+# AXP202 ESPhome component for Lilygo T-Watch 2020 V1
 
-Components I've been working up to enable the [Lilygo T-Watch 2020 V1](https://github.com/Xinyuan-LilyGO/TTGO_TWatch_Library/blob/master/docs/watch_2020_v1.md).
+Component tree I've been working up to enable the [Lilygo T-Watch 2020 V1](https://github.com/Xinyuan-LilyGO/TTGO_TWatch_Library/blob/master/docs/watch_2020_v1.md).
+I did not add the accelerometer in the end as I had no use case.
 This is not the watch as the V2 or V3!
 Check which one you have.
 
@@ -15,6 +16,19 @@ See the caveats at the end.
 
 The AXP202 controls power lines and battery/voltage/charging information on the watch.
 The absolute minimum it needs to do for the watch is enable LDO2 at 3.3V to run the backlight.
+
+The speaker output is configured and can be enabled.
+It is configured to follow the voltage on the LDO3IN pin as that's connected on the PCB, presumably for this reason.
+
+The button on the crown is available, it will send short presses.
+It's not actually a real button to the ESP32, the AXP202 will listen for press events and raise an interrupt.
+The micro will then emulate that press once it is finished, so there is a delay.
+
+Despite the crown rotating, it's not actually wired to anything, so cannot be used.
+
+Sensors can be set for the battery percentage, voltage and current discharge, and the USB voltage.
+There are additionally booleans for the presence of USB and whether charging is occurring.
+Others are possible, see the interrupt section of the datasheet.
 
 Coulomb counter isn't used, bus current isn't used.
 
@@ -129,6 +143,10 @@ sensor:
       name: "Battery"
 
 output:
+  # Pager motor, 50ms buzz is enough
+  - platform: gpio
+    id: motor
+    pin: 4
   - platform: ledc
     pin: 
       number: 12
@@ -220,7 +238,7 @@ display:
     # no reset_pin
     invert_colors: true
     dc_pin: 27
-    data_rate: 80MHz
+    data_rate: 80MHz # Run faster, less warnings on being too slow
     cs_pin:
       number: 5
       ignore_strapping_warning: true
@@ -230,6 +248,8 @@ display:
           it.printf(10, 2, id(roboto), purple, "test1");       
           it.printf(80, 170, id(roboto), blue_drk, "test2"); 
 ```
+
+Using LVGL works well for UI, the [ESPhome tutorial](https://esphome.io/components/lvgl/) is better than I could write.
 
 ## Caveats
 

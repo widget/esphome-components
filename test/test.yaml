@@ -1,0 +1,58 @@
+# Test YAML used during development from a esphome checkout
+# with uv run esphome config ../path/to/esphome-components/test/test.yaml
+#
+# Definitely non-functional!
+
+esphome:
+  name: "test"
+
+external_components:
+  - source: 
+      type: local
+      path: ../components/
+
+esp32:
+  board:  ttgo-t-watch
+  framework:
+    type: esp-idf
+    version: recommended
+  flash_size: 16MB
+  
+api:
+
+wifi:
+  ssid: example
+  password: exampleexample
+
+i2c:
+  - id: tt_sensor
+    sda: 21
+    scl: 22
+
+axp202:
+  i2c_id: tt_sensor
+  # this turns on power but doesn't actually need brightness control as that's done in ledc
+  backlight: true
+  speaker: false
+  interrupt_pin:
+      number: 35
+
+
+binary_sensor:
+  - platform: axp202
+    charging:
+      name: charging
+    usb:
+      name: usb
+
+sensor:
+  # this turns on power but doesn't actually need brightness control as that's done later
+  - platform: axp202
+    bus_voltage:
+      name: "USB Voltage"
+    battery_voltage:
+      name: "Battery Voltage"
+    battery_level:
+      name: "Battery"
+    battery_current:
+      name: "current"

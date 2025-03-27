@@ -24,12 +24,13 @@ AXP202Component = axp202_ns.class_(
 )
 
 CONF_AXP202_ID = "axp202_id"
+CONF_BACKLIGHT = "backlight"
 
 CONFIG_SCHEMA = (
     cv.Schema(
         {
             cv.GenerateID(): cv.declare_id(AXP202Component),
-            cv.Optional("backlight", default=False): cv.boolean,
+            cv.Optional(CONF_BACKLIGHT, default=False): cv.boolean,
             cv.Optional(CONF_SPEAKER, default=False): cv.boolean,
             cv.Optional(CONF_INTERRUPT_PIN): cv.All(
                 pins.internal_gpio_input_pin_schema
@@ -46,12 +47,13 @@ async def to_code(config):
     await cg.register_component(var, config)
     await i2c.register_i2c_device(var, config)
 
-    # Control power domains
+    # Hardcode power domains used in Lilygo T-Watch at configuration time
+    # Voltage level is not controlled in YAML at all
     if speaker := config.get(CONF_SPEAKER):
-        LOGGER.info("Setting LD03 " + repr(speaker))
+        LOGGER.info("Fixing LD03 (speaker) %s", repr("on" if speaker else "off"))
         cg.add(var.SetLDO3(speaker))
     if backlight := config.get("backlight"):
-        LOGGER.info("Setting LD02 " + repr(backlight))
+        LOGGER.info("Fixing LD02 (backlight) %s", repr("on" if backlight else "off"))
         cg.add(var.SetLDO2(backlight))
 
     if interrupt_pin_config := config.get(CONF_INTERRUPT_PIN):

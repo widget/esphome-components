@@ -72,15 +72,6 @@ class AXP202Component : public PollingComponent, public i2c::I2CDevice {
   bool GetVBusState();
 
   /*
-  uint8_t  GetBatData();
-
-  void  EnableCoulombcounter(void);
-  void  DisableCoulombcounter(void);
-  void  StopCoulombcounter(void);
-  void  ClearCoulombcounter(void);
-  uint32_t GetCoulombchargeData(void);
-  uint32_t GetCoulombdischargeData(void);
-  float GetCoulombData(void);
 
   uint16_t GetVbatData(void) __attribute__((deprecated));
   uint16_t GetIchargeData(void) __attribute__((deprecated));
@@ -102,15 +93,11 @@ class AXP202Component : public PollingComponent, public i2c::I2CDevice {
   // void SetChargeVoltage( uint8_t );
   float GetBatPower();
   float GetAPSVoltage();
-  float GetBatCoulombInput();
-  float GetBatCoulombOut();
   uint8_t GetWarningLevel(void);
-  void SetCoulombClear();
-  void SetAdcState(bool State);
-
-  void PowerOff();
   */
-  void SetChargeCurrent(uint8_t);
+  void SetChargeCurrent(uint8_t current);
+
+  void SetAdcState(uint8_t Data);
 
   float GetBatVoltage();
   float GetBatDischargeCurrent();

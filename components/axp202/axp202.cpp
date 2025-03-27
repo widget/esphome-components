@@ -176,9 +176,9 @@ void AXP202Component::begin(bool disableLDO2, bool disableLDO3) {
    */
   Write1Byte(0x84, 0b00110010);
 
-  // Set ADC to All Enable. Battery voltage, VBUS, APS voltage, TS pin ADC.
-  // Could enable current measurement
-  Write1Byte(0x82, 0b11001011);
+  // Battery voltage, VBUS, APS voltage, TS pin ADC.
+  //  Current for battery needed for fuel gauge
+  SetAdcState(0b11001011);
 
   // Enable bat detection, CHGLED disabled (there isn't one)
   Write1Byte(0x32, 0x46);
@@ -400,54 +400,7 @@ void AXP202Component::SetChargeCurrent(uint8_t current) {
   Write1Byte(0x33, buf);
 }
 
-/*
-
-void  AXP202Component::EnableCoulombcounter(void)
-{
-    Write1Byte( 0xB8 , 0x80 );
-}
-
-void  AXP202Component::DisableCoulombcounter(void)
-{
-    Write1Byte( 0xB8 , 0x00 );
-}
-
-void  AXP202Component::StopCoulombcounter(void)
-{
-    Write1Byte( 0xB8 , 0xC0 );
-}
-
-void  AXP202Component::ClearCoulombcounter(void)
-{
-    Write1Byte( 0xB8 , 0xA0 );
-}
-
-uint32_t AXP202Component::GetCoulombchargeData(void)
-{
-    return Read32bit(0xB0);
-}
-
-uint32_t AXP202Component::GetCoulombdischargeData(void)
-{
-    return Read32bit(0xB4);
-}
-
-float AXP202Component::GetCoulombData(void)
-{
-
-  uint32_t coin = 0;
-  uint32_t coout = 0;
-
-  coin = GetCoulombchargeData();
-  coout = GetCoulombdischargeData();
-
-  //c = 65536 * current_LSB * (coin - coout) / 3600 / ADC rate
-  //Adc rate can be read from 84H ,change this variable if you change the ADC reate
-  float ccc = 65536 * 0.5 * (coin - coout) / 3600.0 / 25.0;
-  return ccc;
-
-}
-//----------coulomb_end_at_here----------*/
+void AXP202Component::SetAdcState(uint8_t Data) { Write1Byte(0x82, Data); }
 
 /*
 uint16_t AXP202Component::GetVbatData(void){
@@ -641,31 +594,6 @@ float AXP202Component::GetAPSVoltage()
     return ReData * ADCLSB;
 }
 
-float AXP202Component::GetBatCoulombInput()
-{
-    uint32_t ReData = Read32bit( 0xB0 );
-    return ReData * 65536 * 0.5 / 3600 /25.0;
-}
-
-float AXP202Component::GetBatCoulombOut()
-{
-    uint32_t ReData = Read32bit( 0xB4 );
-    return ReData * 65536 * 0.5 / 3600 /25.0;
-}
-
-void AXP202Component::SetCoulombClear()
-{
-    Write1Byte(0xB8,0x20);
-}
-
-void AXP202Component::PowerOff()
-{
-    Write1Byte(0x32, Read8bit(0x32) | 0x80);
-}
-
-void AXP202Component::SetAdcState(bool state)
-{
-    Write1Byte(0x82, state ? 0xff : 0x00);
-}*/
+*/
 }  // namespace axp202
 }  // namespace esphome

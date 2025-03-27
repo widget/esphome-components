@@ -30,3 +30,12 @@
 *.exe
 *.out
 *.app
+
+# Python compilation
+*.pyc
+__pycache__
+.ruff_cache
+
+# Font generation by ESPhome
+*.ttf
+.esphome

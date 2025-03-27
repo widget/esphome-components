@@ -1,26 +1,36 @@
-# esphome-components
+# AXP202 ESPhome component for Lilygo T-Watch 2020 V1
 
-Components I've been working up to enable the [Lilygo T-Watch 2020 V1](https://github.com/Xinyuan-LilyGO/TTGO_TWatch_Library/blob/master/docs/watch_2020_v1.md).
-This is not the same as the V2 or V3!
+Component tree I've been working up to enable the [Lilygo T-Watch 2020 V1](https://github.com/Xinyuan-LilyGO/TTGO_TWatch_Library/blob/master/docs/watch_2020_v1.md).
+I did not add the accelerometer in the end as I had no use case.
+This is not the watch as the V2 or V3!
+Check which one you have.
+
+See the caveats at the end.
 
 ## References
 
 - https://t-watch-document-en.readthedocs.io/en/latest/introduction/product/2020.html
 - https://github.com/Xinyuan-LilyGO/LilyGo-HAL
 
-## TODO
-
-- Test YAML power control
-- Why is the Fuel gauge returning 127?  Docs say percentage
-- Non-polling support
-  - Button
-
 ## Detail
 
-The AXP202 controls power lines and battery information on the watch.
+The AXP202 controls power lines and battery/voltage/charging information on the watch.
 The absolute minimum it needs to do for the watch is enable LDO2 at 3.3V to run the backlight.
 
-It is not reading the PEK button, it only polls voltages.
+The speaker output is configured and can be enabled.
+It is configured to follow the voltage on the LDO3IN pin as that's connected on the PCB, presumably for this reason.
+
+The button on the crown is available, it will send short presses.
+It's not actually a real button to the ESP32, the AXP202 will listen for press events and raise an interrupt.
+The micro will then emulate that press once it is finished, so there is a delay.
+
+Despite the crown rotating, it's not actually wired to anything, so cannot be used.
+
+Sensors can be set for the battery percentage, voltage and current discharge, and the USB voltage.
+There are additionally booleans for the presence of USB and whether charging is occurring.
+Others are possible, see the interrupt section of the datasheet.
+
+Coulomb counter isn't used, bus current isn't used.
 
 Some information also available [here (fr)](http://destroyedlolo.info/ESP/Tech%20TWatch/)
 
@@ -40,6 +50,8 @@ Some information also available [here (fr)](http://destroyedlolo.info/ESP/Tech%2
 AXP202 code is inspired from the esphome-m5stickC repo which has an AXP192 in it.
 
 ## YAML
+
+Here is an example for the watch, although applying it as-is probably won't do what you want.
 
 ```yaml
 substitutions:
@@ -94,6 +106,7 @@ spi:
     clk_pin: 18
     interface: hardware  
 
+# Unused in this example, but technically correct
 i2s_audio:
   - id: i2s_out
     i2s_lrclk_pin: 25 # also known as Word Select
@@ -105,22 +118,35 @@ speaker:
     i2s_audio_id: i2s_out
     i2s_dout_pin: 33
 
+axp202:
+  i2c_id: tt_sensor
+  backlight: true
+  speaker: true # false if you aren't using it
+  interrupt_pin:
+      number: 35
+
+binary_sensor:
+  - platform: axp202
+    charging:
+      name: charging
+    usb:
+      name: usb
+
 sensor:
   # this turns on power but doesn't actually need brightness control as that's done later
   - platform: axp202
-    id: pmc
-    i2c_id: tt_sensor
     bus_voltage:
       name: "USB Voltage"
     battery_voltage:
       name: "Battery Voltage"
     battery_level:
       name: "Battery"
-    backlight: true
-    speaker: false
-
 
 output:
+  # Pager motor, 50ms buzz is enough
+  - platform: gpio
+    id: motor
+    pin: 4
   - platform: ledc
     pin: 
       number: 12
@@ -134,12 +160,9 @@ light:
     output: backlight_pwm
     default_transition_length: 500ms
     restore_mode: RESTORE_AND_ON
-    # on_turn_on:
-    #   - delay: 30s 
-    #   -  light.turn_off: led
-      # - display.page.show: home_page
 
 time:
+  # Probably superfluous
   - platform: pcf8563
     id: rtc_time
     i2c_id: tt_sensor
@@ -151,17 +174,10 @@ time:
       then:
         pcf8563.write_time:
 
-# IR tx unused
+# IR tx unused, untested
 remote_transmitter:
   pin: 13
   carrier_duty_percent: 50%
-
-font:
-  - file:
-      type: gfonts
-      family: Roboto
-    id: roboto
-    size: 25
 
 touchscreen:
   - platform: ft63x6
@@ -177,10 +193,10 @@ touchscreen:
       x_max: 240
       y_min: 0
       y_max: 240
-    # on_touch:
-    #   - light.turn_on: 
-    #       id: led
-    #       brightness: 50%
+    on_touch:
+      - light.turn_on: 
+          id: led
+          brightness: 50%
 
 color:
   - id: green
@@ -222,7 +238,7 @@ display:
     # no reset_pin
     invert_colors: true
     dc_pin: 27
-    data_rate: 80MHz
+    data_rate: 80MHz # Run faster, less warnings on being too slow
     cs_pin:
       number: 5
       ignore_strapping_warning: true
@@ -232,3 +248,28 @@ display:
           it.printf(10, 2, id(roboto), purple, "test1");       
           it.printf(80, 170, id(roboto), blue_drk, "test2"); 
 ```
+
+Using LVGL works well for UI, the [ESPhome tutorial](https://esphome.io/components/lvgl/) is better than I could write.
+
+## Caveats
+
+- The T-Watch V2 and V3 also use this chip but have different power domains, only the backlight matches
+  - And I haven't checked the voltages
+- Voltages are fixed in the C++. If you're using the AXP202 in a different project, you will need to change this
+- Ideally this would all be controlled through YAML. How this project does **NOT** work:
+
+```yaml
+axp202:
+  ldo3:
+    voltage: 3.3
+    initial_state: true
+
+switch:
+  platform: gpio
+  id: speaker
+  pin:
+    axp202: the_id
+    output: ldo3
+```
+
+I don't have the voltages or the switches controllable at runtime.

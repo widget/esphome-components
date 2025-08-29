@@ -1,4 +1,25 @@
-# AXP202 ESPhome component for Lilygo T-Watch 2020 V1
+# ESPHome components
+
+A repo for ESPhome components I've tinkered with.
+
+## AXS5106L for Waveshare ESP32-C6-Touch-LCD-1.47
+
+The touchscreen controller used is called the AXS5106L, which has precisely one datasheet with no I2C information.
+The Shenzen company also has the CST5106L which provides a bit more information about I2C transactions, but no information on the actual protocol.
+
+This driver is a convert of the example code they provide into esphome.
+It permits ESPhome and LVGL to then work, although the dimensions and transforms of the touchscreen must be set and must be manually matched with the display (e.g. if you want portrait on one, you need to do it on both).
+
+[Template file](./esp32c6-touch-template.yaml).
+
+### Caveats
+
+- Not tried the QMI8658 as I have no interest in it
+- Not tried reading the battery voltage as the onboard charging circuitry is extremely crude
+- Not tried the SD card slot, it's not really the ESPhome focus
+
+
+## AXP202 ESPhome component for Lilygo T-Watch 2020 V1
 
 Component tree I've been working up to enable the [Lilygo T-Watch 2020 V1](https://github.com/Xinyuan-LilyGO/TTGO_TWatch_Library/blob/master/docs/watch_2020_v1.md).
 I did not add the accelerometer in the end as I had no use case.
@@ -7,12 +28,12 @@ Check which one you have.
 
 See the caveats at the end.
 
-## References
+### References
 
 - https://t-watch-document-en.readthedocs.io/en/latest/introduction/product/2020.html
 - https://github.com/Xinyuan-LilyGO/LilyGo-HAL
 
-## Detail
+### Detail
 
 The AXP202 controls power lines and battery/voltage/charging information on the watch.
 The absolute minimum it needs to do for the watch is enable LDO2 at 3.3V to run the backlight.
@@ -49,7 +70,7 @@ Some information also available [here (fr)](http://destroyedlolo.info/ESP/Tech%2
 
 AXP202 code is inspired from the esphome-m5stickC repo which has an AXP192 in it.
 
-## YAML
+### YAML
 
 Here is an example for the watch, although applying it as-is probably won't do what you want.
 

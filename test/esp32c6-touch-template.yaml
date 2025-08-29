@@ -3,7 +3,7 @@ esphome:
   name_add_mac_suffix: false
 
 external_components:
-  - source: github://widget/esphome-components@develop
+  - source: github://widget/esphome-components
     components: [ axs5106 ]
     refresh: 0s
 
